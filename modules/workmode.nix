@@ -70,13 +70,10 @@ in {
         Type            = "notify";
         NotifyAccess    = "all";
         ExecStart       = "${pkgs.openfortivpn}/bin/openfortivpn --config=${cfg.vpn.configFile}";
-        # Apply VPN DNS to ppp0 after tunnel is up (resolvectl is always available on NixOS).
-        # ExecStartPost runs after sd_notify readiness, so ppp0 is guaranteed to exist.
-        ExecStartPost   = lib.mkIf (cfg.vpn.dnsServers != []) (pkgs.writeShellScript "workmode-dns" ''
-          ${pkgs.systemd}/bin/resolvectl dns ppp0 ${lib.concatStringsSep " " cfg.vpn.dnsServers}
-          ${lib.optionalString (cfg.vpn.dnsDomains != [])
-            "${pkgs.systemd}/bin/resolvectl domain ppp0 ${lib.concatStringsSep " " cfg.vpn.dnsDomains}"}
-        '');
+        # openfortivpn looks for resolvconf in PATH; without it it tries to
+        # write /etc/resolv.conf directly, which is read-only on NixOS.
+        # Expose the openresolv binary so DNS is applied via resolvconf.
+        Environment     = "PATH=/run/current-system/sw/bin:/run/wrappers/bin";
         Restart         = "on-failure";
         RestartSec      = "5s";
         # openfortivpn must run as root to manage ppp devices
