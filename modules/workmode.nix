@@ -36,6 +36,11 @@ in {
 
   config = lib.mkIf cfg.enable {
 
+    # ── DNS — openresolv bridges openfortivpn ↔ systemd-resolved ─────────────
+    # openfortivpn tries resolvconf binary first; without it, it falls back to
+    # writing /etc/resolv.conf directly, which is read-only on NixOS.
+    networking.resolvconf.enable = lib.mkDefault true;
+
     # ── System packages ────────────────────────────────────────────────────────
     environment.systemPackages = [ pkgs.openfortivpn ];
 
@@ -55,9 +60,7 @@ in {
         RestartSec      = "5s";
         # openfortivpn must run as root to manage ppp devices
         User            = "root";
-        # Harden what we can while still allowing ppp
-        ProtectSystem   = "strict";
-        ProtectHome     = "read-only";
+        # ProtectSystem=strict would block resolvconf writing to /run/resolvconf
         PrivateTmp      = true;
         NoNewPrivileges = false; # ppp helper needs this
         AmbientCapabilities = [ "CAP_NET_ADMIN" "CAP_NET_RAW" ];
