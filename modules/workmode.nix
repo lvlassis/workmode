@@ -94,15 +94,16 @@ in {
       # tunnel unit below.
     };
 
-    # ── SOCKS5 tunnel — user service, after VPN interface is up ──────────────
-    systemd.user.services.workmode-tunnel = {
+    # ── SOCKS5 tunnel — system service running as cfg.user ───────────────────
+    # Must be a system service (not user) so bindsTo/After can reference the
+    # system-level workmode-vpn.service across the same systemd instance.
+    systemd.services.workmode-tunnel = {
       description = "Work Mode SOCKS5 tunnel (ssh -D)";
 
-      after   = [ "workmode-vpn.service" ];
-      bindsTo = [ "workmode-vpn.service" ];
-      wantedBy = [ "default.target" ];
+      after    = [ "workmode-vpn.service" ];
+      bindsTo  = [ "workmode-vpn.service" ];
+      wantedBy = [ "workmode.target" ];
 
-      # StartLimitIntervalSec belongs in unitConfig, not serviceConfig
       unitConfig = {
         StartLimitIntervalSec = "120s";
         StartLimitBurst       = 10;
@@ -110,6 +111,7 @@ in {
 
       serviceConfig = {
         Type       = "simple";
+        User       = cfg.user;
         ExecStart  = "${pkgs.openssh}/bin/ssh -D ${toString cfg.socks5.port} -q -N ${cfg.socks5.sshHost}";
         Restart    = "on-failure";
         RestartSec = "3s";
