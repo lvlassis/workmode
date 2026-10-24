@@ -12,6 +12,20 @@ in {
         default = "/home/${cfg.user}/.config/openfortivpn/config";
         description = "Path to openfortivpn config file.";
       };
+
+      dnsServers = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [];
+        example = [ "10.2.255.251" "10.2.255.252" ];
+        description = "DNS servers pushed by the VPN gateway, applied to ppp0 via resolvectl.";
+      };
+
+      dnsDomains = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [];
+        example = [ "~tce.go.gov.br" ];
+        description = "Routing/search domains for ppp0 (prefix with ~ for routing-only).";
+      };
     };
 
     socks5 = {
@@ -56,6 +70,13 @@ in {
         Type            = "notify";
         NotifyAccess    = "all";
         ExecStart       = "${pkgs.openfortivpn}/bin/openfortivpn --config=${cfg.vpn.configFile}";
+        # Apply VPN DNS to ppp0 after tunnel is up (resolvectl is always available on NixOS).
+        # ExecStartPost runs after sd_notify readiness, so ppp0 is guaranteed to exist.
+        ExecStartPost   = lib.mkIf (cfg.vpn.dnsServers != []) (pkgs.writeShellScript "workmode-dns" ''
+          ${pkgs.systemd}/bin/resolvectl dns ppp0 ${lib.concatStringsSep " " cfg.vpn.dnsServers}
+          ${lib.optionalString (cfg.vpn.dnsDomains != [])
+            "${pkgs.systemd}/bin/resolvectl domain ppp0 ${lib.concatStringsSep " " cfg.vpn.dnsDomains}"}
+        '');
         Restart         = "on-failure";
         RestartSec      = "5s";
         # openfortivpn must run as root to manage ppp devices
@@ -80,22 +101,21 @@ in {
     systemd.user.services.workmode-tunnel = {
       description = "Work Mode SOCKS5 tunnel (ssh -D)";
 
-      # Wait for the system-level VPN service. The sd_notify dance means ppp0
-      # exists once workmode-vpn.service reaches active(running).
-      after  = [ "workmode-vpn.service" ];
-      # If the VPN dies the tunnel is useless — tear it down too.
+      after   = [ "workmode-vpn.service" ];
       bindsTo = [ "workmode-vpn.service" ];
-      wantedBy = [ "default.target" ]; # activated by the target slice below
+      wantedBy = [ "default.target" ];
+
+      # StartLimitIntervalSec belongs in unitConfig, not serviceConfig
+      unitConfig = {
+        StartLimitIntervalSec = "120s";
+        StartLimitBurst       = 10;
+      };
 
       serviceConfig = {
         Type       = "simple";
         ExecStart  = "${pkgs.openssh}/bin/ssh -D ${toString cfg.socks5.port} -q -N ${cfg.socks5.sshHost}";
-        # Retry: VPN might take a moment to finish routing
         Restart    = "on-failure";
         RestartSec = "3s";
-        # Keep trying for up to 2 min before giving up on this activation
-        StartLimitIntervalSec = "120s";
-        StartLimitBurst       = "10";
       };
     };
 
