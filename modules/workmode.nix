@@ -63,8 +63,9 @@ in {
       description = "Work Mode VPN (openfortivpn)";
       after       = [ "network-online.target" ];
       wants       = [ "network-online.target" ];
-      # workmode.target pulls this in
       wantedBy    = [ "workmode.target" ];
+      # stop/restart when the target stops/restarts
+      partOf      = [ "workmode.target" ];
 
       serviceConfig = {
         Type            = "notify";
@@ -103,6 +104,7 @@ in {
       after    = [ "workmode-vpn.service" ];
       bindsTo  = [ "workmode-vpn.service" ];
       wantedBy = [ "workmode.target" ];
+      partOf   = [ "workmode.target" ];
 
       unitConfig = {
         StartLimitIntervalSec = "120s";
