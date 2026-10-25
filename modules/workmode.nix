@@ -23,7 +23,7 @@ in {
       dnsDomains = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [];
-        example = [ "~tce.go.gov.br" ];
+        example = [ "~example.com.br" ];
         description = "Routing/search domains for ppp0 (prefix with ~ for routing-only).";
       };
     };
