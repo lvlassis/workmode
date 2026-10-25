@@ -129,6 +129,7 @@ in {
         ExecStartPost = pkgs.writeShellScript "workmode-proxy-up" ''
           export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
           export GSETTINGS_SCHEMA_DIR="${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}/glib-2.0/schemas"
+          export GIO_EXTRA_MODULES="${pkgs.dconf.lib}/lib/gio/modules"
           ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy mode 'manual' || true
           ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy.socks host 'localhost' || true
           ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy.socks port ${toString cfg.socks5.port} || true
@@ -136,6 +137,7 @@ in {
         ExecStopPost = pkgs.writeShellScript "workmode-proxy-down" ''
           export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
           export GSETTINGS_SCHEMA_DIR="${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}/glib-2.0/schemas"
+          export GIO_EXTRA_MODULES="${pkgs.dconf.lib}/lib/gio/modules"
           ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy mode 'none' || true
         '';
 
