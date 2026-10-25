@@ -61,7 +61,9 @@ in {
     programs.dconf.enable = lib.mkDefault true;
 
     # ── System packages ────────────────────────────────────────────────────────
-    environment.systemPackages = [ pkgs.openfortivpn ];
+    # gsettings-desktop-schemas provides org.gnome.system.proxy; NixOS compiles
+    # all installed schemas into /run/current-system/sw/share/glib-2.0/schemas/
+    environment.systemPackages = [ pkgs.openfortivpn pkgs.gsettings-desktop-schemas ];
 
     # ── VPN — system service (needs root to create ppp0) ─────────────────────
     systemd.services.workmode-vpn = {
@@ -126,12 +128,14 @@ in {
         # DBus session socket at /run/user/<uid>/bus.
         ExecStartPost = pkgs.writeShellScript "workmode-proxy-up" ''
           export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+          export XDG_DATA_DIRS="/run/current-system/sw/share"
           ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy mode 'manual' || true
           ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy.socks host 'localhost' || true
           ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy.socks port ${toString cfg.socks5.port} || true
         '';
         ExecStopPost = pkgs.writeShellScript "workmode-proxy-down" ''
           export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+          export XDG_DATA_DIRS="/run/current-system/sw/share"
           ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy mode 'none' || true
         '';
 
