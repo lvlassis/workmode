@@ -112,9 +112,24 @@ in {
       };
 
       serviceConfig = {
-        Type       = "simple";
-        User       = cfg.user;
-        ExecStart  = "${pkgs.openssh}/bin/ssh -D ${toString cfg.socks5.port} -q -N ${cfg.socks5.sshHost}";
+        Type      = "simple";
+        User      = cfg.user;
+        ExecStart = "${pkgs.openssh}/bin/ssh -D ${toString cfg.socks5.port} -q -N ${cfg.socks5.sshHost}";
+
+        # Toggle GNOME system proxy so Zen/Firefox picks it up automatically.
+        # The service runs as cfg.user, so id -u returns the right UID for the
+        # DBus session socket at /run/user/<uid>/bus.
+        ExecStartPost = pkgs.writeShellScript "workmode-proxy-up" ''
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy mode 'manual'
+          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy.socks host 'localhost'
+          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy.socks port ${toString cfg.socks5.port}
+        '';
+        ExecStopPost = pkgs.writeShellScript "workmode-proxy-down" ''
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy mode 'none'
+        '';
+
         Restart    = "on-failure";
         RestartSec = "3s";
       };
