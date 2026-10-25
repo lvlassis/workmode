@@ -121,13 +121,13 @@ in {
         # DBus session socket at /run/user/<uid>/bus.
         ExecStartPost = pkgs.writeShellScript "workmode-proxy-up" ''
           export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
-          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy mode 'manual'
-          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy.socks host 'localhost'
-          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy.socks port ${toString cfg.socks5.port}
+          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy mode 'manual' || true
+          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy.socks host 'localhost' || true
+          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy.socks port ${toString cfg.socks5.port} || true
         '';
         ExecStopPost = pkgs.writeShellScript "workmode-proxy-down" ''
           export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
-          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy mode 'none'
+          ${pkgs.glib}/bin/gsettings set org.gnome.system.proxy mode 'none' || true
         '';
 
         Restart    = "on-failure";
